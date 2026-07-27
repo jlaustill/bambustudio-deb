@@ -13,11 +13,12 @@ PKG_DIR="${PKG_NAME}_${PKG_VERSION}_${ARCH}"
 
 echo "Building BambuStudio ${VERSION} (Ubuntu ${UBUNTU_VERSION}) .deb package..."
 
-# Determine AppImage filename pattern
+# Determine AppImage filename pattern. Upstream has used both "ubuntu-24.04"
+# (through v02.04.00.70) and "ubuntu24.04" (v02.07.01.62 onward), so match either.
 if [[ "$UBUNTU_VERSION" == "22.04" ]]; then
-    APPIMAGE_PATTERN="ubuntu-22.04"
+    APPIMAGE_PATTERN="ubuntu-?22\\.04"
 elif [[ "$UBUNTU_VERSION" == "24.04" ]]; then
-    APPIMAGE_PATTERN="ubuntu-24.04"
+    APPIMAGE_PATTERN="ubuntu-?24\\.04"
 else
     echo "Unsupported Ubuntu version. Use 22.04 or 24.04"
     exit 1
@@ -26,7 +27,8 @@ fi
 # Find the exact AppImage filename from release
 echo "Finding AppImage for Ubuntu ${UBUNTU_VERSION}..."
 APPIMAGE_URL=$(curl -s "https://api.github.com/repos/bambulab/BambuStudio/releases/tags/${VERSION}" | \
-    jq -r ".assets[] | select(.name | contains(\"${APPIMAGE_PATTERN}\") and endswith(\".AppImage\")) | .browser_download_url" | \
+    jq -r --arg pattern "$APPIMAGE_PATTERN" \
+        '.assets[] | select((.name | test($pattern)) and (.name | endswith(".AppImage"))) | .browser_download_url' | \
     head -1)
 
 if [[ -z "$APPIMAGE_URL" || "$APPIMAGE_URL" == "null" ]]; then
